@@ -7,7 +7,6 @@ namespace ClienteMovimiento.Entities
         {
         }
         public int ClienteId { get; set; }
-        public int CienteId { get; set; }
         public string Contrasena { get; set; }
         public string Estado { get; set; }
     }
