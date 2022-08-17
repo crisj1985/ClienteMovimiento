@@ -9,5 +9,6 @@ namespace ClienteMovimiento.Entities
         public int ClienteId { get; set; }
         public string Contrasena { get; set; }
         public string Estado { get; set; }
+        public List<Cuenta> Cuentas { get; set; }
     }
 }
