@@ -14,5 +14,6 @@ namespace ClienteMovimiento.Entities
         public string Identificacion { get; set; }
         public string Direccion { get; set; }
         public string Telefono { get; set; }
+        public string Telef1ono { get; set; }
     }
 }
