@@ -11,5 +11,6 @@ namespace ClienteMovimiento
         }
         public DbSet<Cliente> Clientes { get; set; }
         public DbSet<Cuenta> Cuentas { get; set; }
+        //public DbSet<Movimiento> Movimientos { get; set; }
     }
 }
