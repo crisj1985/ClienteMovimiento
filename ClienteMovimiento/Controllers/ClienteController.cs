@@ -1,46 +1,46 @@
 ﻿using AutoMapper;
 using ClienteMovimiento.Entities;
 using ClienteMovimiento.Models;
+using ClienteMovimiento.Repositories;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace ClienteMovimiento.Controllers
 {
-    [Route("api/cliente")]
+    [Route("api/clientes")]
     [ApiController]
     public class ClienteController : ControllerBase
     {
-        public AppDbContext _context { get; }
         public IMapper _mapper { get; }
+        public IRepository<Cliente> _repository { get; }
 
-        public ClienteController(AppDbContext context,IMapper mapper)
+        public ClienteController(IMapper mapper, IRepository<Cliente> repository)
         {
-            _context = context;
             _mapper = mapper;
+            _repository = repository;
         }
 
 
         [HttpGet]
-        public async Task<ActionResult<List<ClienteModel>>> Get()
+        public ActionResult<List<ClienteConCuentasModel>> Get()
         {
-            List<Cliente> clientes = await _context.Clientes.Include(x=>x.Cuentas).ToListAsync();
-            List<ClienteModel> clientesModel = _mapper.Map<List<ClienteModel>>(clientes);
+            List<Cliente> clientes = _repository.GetAll().Include(x=>x.Cuentas).ToList();
+            List<ClienteConCuentasModel> clientesModel = _mapper.Map<List<ClienteConCuentasModel>>(clientes);
             return clientesModel;
         }
         [HttpGet("{id}")]
-        public async Task<ActionResult<ClienteModel>> Get(int id)
+        public ActionResult<ClienteConCuentasModel> Get(int id)
         {
-            Cliente cliente = await _context.Clientes.Include(x => x.Cuentas).FirstOrDefaultAsync(x=>x.Id == id);
-            ClienteModel clienteModel = _mapper.Map<ClienteModel>(cliente);
+            Cliente cliente = _repository.GetAll().Include(x => x.Cuentas).FirstOrDefault(x => x.Id == id);
+            ClienteConCuentasModel clienteModel = _mapper.Map<ClienteConCuentasModel>(cliente);
             return clienteModel;
         }
         [HttpPost]
         public async Task<ActionResult> Post(ClienteModel clienteModel)
         {
-            Cliente cliente = _mapper.Map<Cliente>(clienteModel);   
-            _context.Add(cliente);
-            await _context.SaveChangesAsync();
+            Cliente cliente = _mapper.Map<Cliente>(clienteModel);
+            await _repository.Add(cliente);
             return Ok();
 
         }
@@ -53,22 +53,25 @@ namespace ClienteMovimiento.Controllers
             {
                 return BadRequest("Cliente diferente al enviado a actualizar");
             }
+            bool ExisteCliente = _repository.GetAll().Any(x => x.Id == id);
+            if (!ExisteCliente)
+            {
+                return NotFound(); ;
+            }
 
-            _context.Update(cliente);
-            await _context.SaveChangesAsync();
+            await _repository.Update(cliente);
             return Ok();
 
         }
         [HttpDelete("{id}")]
         public async Task<ActionResult> Delete(int id)
         {
-            bool ExisteCliente = await _context.Clientes.AnyAsync(x => x.Id == id);    
+            bool ExisteCliente = _repository.GetAll().Any(x => x.Id == id);
             if (!ExisteCliente)
             {
                 return NotFound(); ;
             }
-            _context.Remove(new Cliente { Id=id});
-            await _context.SaveChangesAsync();
+            await _repository.Delete(new Cliente { Id = id});
             return Ok();
 
         }

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations;
+
 namespace ClienteMovimiento.Entities
 {
     public class Cliente : Persona
@@ -6,7 +8,6 @@ namespace ClienteMovimiento.Entities
         public Cliente()
         {
         }
-        public int ClienteId { get; set; }
         public string Contrasena { get; set; }
         public string Estado { get; set; }
         public List<Cuenta> Cuentas { get; set; }

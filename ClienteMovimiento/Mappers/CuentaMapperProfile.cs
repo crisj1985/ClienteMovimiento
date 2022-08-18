@@ -8,8 +8,11 @@ namespace ClienteMovimiento.Mappers
     {
         public CuentaMapperProfile()
         {
-            CreateMap<Cuenta,CuentaModel>().ReverseMap();
-            CreateMap<Cuenta,CuentaActualizarModel>().ReverseMap();
+            CreateMap<Cuenta, CuentaModel>().ReverseMap();
+            CreateMap<Cuenta, CuentasConMovimientosModel>().ReverseMap();
+
+            CreateMap<Cuenta, CuentaActualizarModel>().ReverseMap();
+
         }
     }
 }

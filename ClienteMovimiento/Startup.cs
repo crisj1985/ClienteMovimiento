@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using ClienteMovimiento.Entities;
+using ClienteMovimiento.Repositories;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
@@ -30,6 +32,9 @@ namespace ClienteMovimiento
         {
             services.AddControllers().AddJsonOptions(x => x.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
             services.AddDbContext<AppDbContext>(x => x.UseSqlServer(_config.GetConnectionString("ConeccionDB")));
+            services.AddScoped<IRepository<Cliente>, Repository<Cliente>>();
+            services.AddScoped<IRepository<Cuenta>, Repository<Cuenta>>();
+            services.AddScoped<IRepository<Movimiento>, Repository<Movimiento>>();
 
             services.AddEndpointsApiExplorer();
             services.AddSwaggerGen(c =>

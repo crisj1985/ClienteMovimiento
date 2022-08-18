@@ -8,8 +8,8 @@ namespace ClienteMovimiento.Mappers
     {
         public ClienteMapperProfile()
         {
-            CreateMap<Cliente, ClienteModel>();
-            CreateMap<ClienteModel, Cliente>();
+            CreateMap<Cliente, ClienteModel>().ReverseMap();
+            CreateMap<Cliente, ClienteConCuentasModel>().ReverseMap();
 
             CreateMap<Persona, PersonaModel>()
            .Include<Cliente, ClienteModel>().ReverseMap();

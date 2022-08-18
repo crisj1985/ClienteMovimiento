@@ -7,7 +7,6 @@
         public decimal SaldoInicial { get; set; }
         public string Estado { get; set; }
         public int ClienteId { get; set; }
-        public ClienteModel Cliente { get; set; }
 
     }
 }

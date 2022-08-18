@@ -13,5 +13,6 @@ namespace ClienteMovimiento.Entities
         public string Estado { get; set; }
         public int ClienteId { get; set; }
         public Cliente Cliente { get; set; }
+        public List<Movimiento> Movimientos { get; set; }
     }
 }

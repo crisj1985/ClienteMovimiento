@@ -1,45 +1,52 @@
 ﻿using AutoMapper;
 using ClienteMovimiento.Entities;
 using ClienteMovimiento.Models;
+using ClienteMovimiento.Repositories;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace ClienteMovimiento.Controllers
 {
-    [Route("api/cuenta")]
+    [Route("api/cuentas")]
     [ApiController]
     public class CuentaController : ControllerBase
     {
-        public CuentaController(AppDbContext context, IMapper maper)
+        public IMapper _mapper { get; }
+        public IRepository<Cuenta> _repositoryCuenta { get; }
+        public IRepository<Cliente> _repositoryCliente { get; }
+        public CuentaController(IMapper maper, IRepository<Cuenta> repositoryCuenta, IRepository<Cliente> repositoryCliente)
         {
-            _context = context;
             _mapper = maper;
+            _repositoryCuenta = repositoryCuenta;
+            _repositoryCliente = repositoryCliente;   
         }
 
-        public AppDbContext _context { get; }
-        public IMapper _mapper { get; }
+        [HttpGet]
+        public ActionResult<List<CuentasConMovimientosModel>> Get()
+        {
+            List<Cuenta> cuentas = _repositoryCuenta.GetAll().Include(x => x.Movimientos).ToList();
+            List<CuentasConMovimientosModel> cuentasModel = _mapper.Map<List<CuentasConMovimientosModel>>(cuentas);
+            return cuentasModel;
+        }
 
         [HttpGet("{id:int}")]
-        public async Task<ActionResult<CuentaModel>> Get(int id)
+        public ActionResult<CuentasConMovimientosModel> Get(int id)
         {
-            Cuenta cuenta = await _context.Cuentas.FirstOrDefaultAsync(x=>x.Id==id);
-
-            CuentaModel CuentaModel = _mapper.Map<CuentaModel>(cuenta);
-
-            return CuentaModel;
+            Cuenta cuenta = _repositoryCuenta.GetAll().Include(x => x.Movimientos).FirstOrDefault(x => x.Id == id);
+            CuentasConMovimientosModel cuentaModel = _mapper.Map<CuentasConMovimientosModel>(cuenta);
+            return cuentaModel;
         }
         [HttpPost]
         public async Task<ActionResult> Post(CuentaModel cuentaModel)
         {
             Cuenta cuenta = _mapper.Map<Cuenta>(cuentaModel);   
-            bool ExisteCuenta = await _context.Clientes.AnyAsync(x => x.Id == cuenta.ClienteId);
-            if (!ExisteCuenta)
+            bool ExisteCliente = await _repositoryCliente.GetAll().AnyAsync(x => x.Id == cuenta.ClienteId);
+            if (!ExisteCliente)
             {
                 return BadRequest($"No existe el cliente {cuenta.ClienteId}");
             }
-            _context.Add(cuenta);
-            await _context.SaveChangesAsync();
+            await _repositoryCuenta.Add(cuenta);
             return Ok();
 
         }
@@ -52,8 +59,30 @@ namespace ClienteMovimiento.Controllers
             {
                 return BadRequest("Cuenta diferente al enviado a actualizar");
             }
-            _context.Update(cuenta);
-            await _context.SaveChangesAsync();
+            bool ExisteCuenta = _repositoryCuenta.GetAll().Any(x => x.Id == id);
+            if (!ExisteCuenta)
+            {
+                return NotFound(); ;
+            }
+            bool ExisteCliente = await _repositoryCliente.GetAll().AnyAsync(x => x.Id == cuenta.ClienteId);
+            if (!ExisteCliente)
+            {
+                return BadRequest($"No existe el cliente {cuenta.ClienteId}");
+            }
+
+            await _repositoryCuenta.Update(cuenta);
+            return Ok();
+
+        }
+        [HttpDelete("{id}")]
+        public async Task<ActionResult> Delete(int id)
+        {
+            bool ExisteCuenta = _repositoryCuenta.GetAll().Any(x => x.Id == id);
+            if (!ExisteCuenta)
+            {
+                return NotFound(); ;
+            }
+            await _repositoryCuenta.Delete(new Cuenta { Id = id });
             return Ok();
 
         }
