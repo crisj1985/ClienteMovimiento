@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using ClienteMovimiento.ManejoExcepciones;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace ClienteMovimiento.Repositories
@@ -14,41 +15,84 @@ namespace ClienteMovimiento.Repositories
 
         public async Task Add(T Entity)
         {
-            if (Entity == null)
+            try
             {
-                throw new ArgumentNullException(nameof(Entity),"La entidad no puede ser null");
+                if (Entity == null)
+                {
+                    throw new ArgumentNullException(nameof(Entity),"La entidad no puede ser null");
+                }
+                _context.Add(Entity);
+                await _context.SaveChangesAsync();
+
             }
-            _context.Add(Entity);
-            await _context.SaveChangesAsync();
+            catch (Exception ex)
+            {
+                ClsExcepcionCapturada.EscribirEvento($"{ex?.Message} - {ex?.StackTrace}" );
+             
+            }
         }
 
         public async Task Delete(T Entity)
         {
-            if (Entity == null)
+            try
             {
-                throw new ArgumentNullException(nameof(Entity), "La entidad no puede ser null");
+                if (Entity == null)
+                {
+                    throw new ArgumentNullException(nameof(Entity), "La entidad no puede ser null");
+                }
+                _context.Remove(Entity);
+                await _context.SaveChangesAsync();
             }
-            _context.Remove(Entity);
-            await _context.SaveChangesAsync();
-        }
+            catch (Exception ex)
+            {
+                ClsExcepcionCapturada.EscribirEvento($"{ex?.Message} - {ex?.StackTrace}" );
+             
+            }
+}
 
         public async Task Update(T Entity)
         {
-            if (Entity == null)
+            try
             {
-                throw new ArgumentNullException(nameof(Entity), "La entidad no puede ser null");
+                if (Entity == null)
+                {
+                    throw new ArgumentNullException(nameof(Entity), "La entidad no puede ser null");
+                }
+                _context.Update(Entity);
+                await _context.SaveChangesAsync();
+
             }
-            _context.Update(Entity);
-            await _context.SaveChangesAsync();
+            catch (Exception ex)
+            {
+                ClsExcepcionCapturada.EscribirEvento($"{ex?.Message} - {ex?.StackTrace}");
+
+            }
         }
         public  DbSet<T> GetAll()
         {
-            return _context.Set<T>();
+            try
+            {
+
+               return _context.Set<T>();
+            }
+            catch(Exception ex)
+            {
+                ClsExcepcionCapturada.EscribirEvento($"{ex?.Message} - {ex?.StackTrace}");
+            }
+            return null;
         }
 
         public T GetElementById(int id)
         {
-            return _context.Set<T>().Find(id);
+            try
+            {
+                return _context.Set<T>().Find(id);
+            }
+            catch (Exception ex)
+            {
+                ClsExcepcionCapturada.EscribirEvento($"{ex?.Message} - {ex?.StackTrace}");
+            }
+            return null;
         }
 
     }

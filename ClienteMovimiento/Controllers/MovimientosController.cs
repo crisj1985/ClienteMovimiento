@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using ClienteMovimiento.Entities;
+using ClienteMovimiento.ManejoExcepciones;
 using ClienteMovimiento.Models;
 using ClienteMovimiento.Repositories;
 using Microsoft.AspNetCore.Http;
@@ -45,23 +46,29 @@ namespace ClienteMovimiento.Controllers
         public async Task<ActionResult> Post(MovimientoModel movimientoModel)
         {
             Cuenta cuenta = new Cuenta();
-            bool ExisteCuenta = await _repositoryCuenta.GetAll().AnyAsync(x => x.Id == movimientoModel.CuentaId);
+            List<Cuenta> cuentasDB = _repositoryCuenta.GetAll().ToList();
+            bool ExisteCuenta = cuentasDB == null ? false : cuentasDB.Any(x => x.Id == movimientoModel.CuentaId);
             if (!ExisteCuenta)
             {
+                ClsExcepcionCapturada.EscribirEvento($"No existe el cuenta {movimientoModel.CuentaId}");
                 return BadRequest($"No existe el cuenta {movimientoModel.CuentaId}");
             }
             else
             {
                 if (SuperoLimiteDiario(movimientoModel))
+                {
+                    ClsExcepcionCapturada.EscribirEvento($"Cupo Excedido para {movimientoModel.CuentaId}");
                     return BadRequest($"Cupo Excedido");
+                }
                 else 
                 { 
-                    cuenta = await _repositoryCuenta.GetAll().FirstOrDefaultAsync(x => x.Id == movimientoModel.CuentaId);
+                    cuenta = cuentasDB.FirstOrDefault(x => x.Id == movimientoModel.CuentaId);
 
                     if (movimientoModel.Valor < 0)
                     {
                         if (cuenta.SaldoInicial - Math.Abs(movimientoModel.Valor) < 0)
                         {
+                            ClsExcepcionCapturada.EscribirEvento($"Saldo Insuficiente para {movimientoModel.CuentaId}");
                             return BadRequest($"Saldo Insuficiente");
                         }
                         movimientoModel.Saldo = cuenta.SaldoInicial - Math.Abs(movimientoModel.Valor);
@@ -88,6 +95,7 @@ namespace ClienteMovimiento.Controllers
 
             if (movimiento.Id != id)
             {
+                ClsExcepcionCapturada.EscribirEvento($"Movimiento diferente al enviado a actualizar {movimientoModel.CuentaId}");
                 return BadRequest("Movimiento diferente al enviado a actualizar");
             }
             bool ExisteMovimiento = _repositoryMovimiento.GetAll().Any(x => x.Id == id);
@@ -98,6 +106,7 @@ namespace ClienteMovimiento.Controllers
             bool ExisteCuenta = await _repositoryCuenta.GetAll().AnyAsync(x => x.Id == movimiento.CuentaId);
             if (!ExisteCuenta)
             {
+                ClsExcepcionCapturada.EscribirEvento($"No existe el cuenta {movimiento.CuentaId}");
                 return BadRequest($"No existe el cuenta {movimiento.CuentaId}");
             }
 
@@ -119,16 +128,24 @@ namespace ClienteMovimiento.Controllers
         }
         private bool SuperoLimiteDiario(MovimientoModel movimientoModel)
         {
-            List<Movimiento> movs = _repositoryMovimiento.GetAll().ToList();
-            decimal total = movs.Where(x => x.Fecha.Date == movimientoModel.Fecha.Date 
-                                        && x.CuentaId == movimientoModel.CuentaId 
-                                        && x.TipoMovimiento.Equals("Retiro",StringComparison.OrdinalIgnoreCase))
-                            .Sum(x => Math.Abs(x.Valor)) + Math.Abs(movimientoModel.Valor);
+            decimal total = 0;
+            IEnumerable<Movimiento> MovsFecha = null;
+            try
+            {
+                List<Movimiento> movs = _repositoryMovimiento.GetAll().Where(x => x.CuentaId == movimientoModel.CuentaId).ToList();
+                if (movs.Count > 0)
+                {
+                    MovsFecha = movs.Where(x => x.Fecha.Date == movimientoModel.Fecha.Date
+                                                && x.TipoMovimiento.Equals("Retiro", StringComparison.OrdinalIgnoreCase));
+                    if(MovsFecha.Count() > 0)
+                        total = MovsFecha.Sum(x => Math.Abs(x.Valor)) + Math.Abs(movimientoModel.Valor);
+                }
+            }
+            catch (Exception ex)
+            {
+                ClsExcepcionCapturada.EscribirEvento($"{ex?.Message} - {ex?.StackTrace}");
+            }
             return total >= _config.GetValue<decimal>("CupoDiario") ;
         } 
-        private List<Movimiento> BuscarMovimientosByFecha(DateTime FechaDesde, DateTime HastaDesde)
-        {
-            return _repositoryMovimiento.GetAll().Where(x => x.Fecha.Date >= FechaDesde.Date && x.Fecha.Date <= HastaDesde.Date).ToList<Movimiento>();
-        }
     }
 }
