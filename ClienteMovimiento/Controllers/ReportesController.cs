@@ -36,7 +36,7 @@ namespace ClienteMovimiento.Controllers
                     Estado = x.Estado,
                     Movimiento = z.Valor.ToString(),
                     NumeroCuenta = x.NumeroCuenta,
-                    Saldo = z.Saldo.ToString(),
+                    SaldoInicial = (z.Saldo - z.Valor).ToString(),
                     SaldoDisponible = z.Saldo.ToString(),
                     Tipo = x.TipoCuenta
                 })));

@@ -47,44 +47,22 @@ namespace ClienteMovimiento.Controllers
         {
             Cuenta cuenta = new Cuenta();
             List<Cuenta> cuentasDB = _repositoryCuenta.GetAll().ToList();
-            bool ExisteCuenta = cuentasDB == null ? false : cuentasDB.Any(x => x.Id == movimientoModel.CuentaId);
-            if (!ExisteCuenta)
+            cuenta = cuentasDB.FirstOrDefault(x => x.Id == movimientoModel.CuentaId);
+            List<object> Result = ProcesarMovimiento(movimientoModel, cuenta);
+            
+            if (Result.Count > 0 && Result[0].ToString().Equals("ok", StringComparison.OrdinalIgnoreCase))
             {
-                ClsExcepcionCapturada.EscribirEvento($"No existe el cuenta {movimientoModel.CuentaId}");
-                return BadRequest($"No existe el cuenta {movimientoModel.CuentaId}");
+                movimientoModel.Saldo = (Result[1] as MovimientoModel).Saldo;
+                Movimiento movimiento = _mapper.Map<Movimiento>(movimientoModel);
+                cuenta.SaldoInicial = movimientoModel.Saldo + movimientoModel.Valor;
+                await _repositoryMovimiento.Add(movimiento);
+                await _repositoryCuenta.Add(cuenta);
             }
             else
             {
-                if (SuperoLimiteDiario(movimientoModel))
-                {
-                    ClsExcepcionCapturada.EscribirEvento($"Cupo Excedido para {movimientoModel.CuentaId}");
-                    return BadRequest($"Cupo Excedido");
-                }
-                else 
-                { 
-                    cuenta = cuentasDB.FirstOrDefault(x => x.Id == movimientoModel.CuentaId);
-
-                    if (movimientoModel.Valor < 0)
-                    {
-                        if (cuenta.SaldoInicial - Math.Abs(movimientoModel.Valor) < 0)
-                        {
-                            ClsExcepcionCapturada.EscribirEvento($"Saldo Insuficiente para {movimientoModel.CuentaId}");
-                            return BadRequest($"Saldo Insuficiente");
-                        }
-                        movimientoModel.Saldo = cuenta.SaldoInicial - Math.Abs(movimientoModel.Valor);
-                    }
-                    else
-                    {
-                        movimientoModel.Saldo = cuenta.SaldoInicial + Math.Abs(movimientoModel.Valor);
-                    }
-                    cuenta.SaldoInicial = movimientoModel.Saldo;
-                }
-
+                return BadRequest(Result[0].ToString());
             }
-            Movimiento movimiento = _mapper.Map<Movimiento>(movimientoModel);
 
-            await _repositoryMovimiento.Add(movimiento);
-            await _repositoryCuenta.Update(cuenta);
             return Ok();
 
         }
@@ -146,6 +124,62 @@ namespace ClienteMovimiento.Controllers
                 ClsExcepcionCapturada.EscribirEvento($"{ex?.Message} - {ex?.StackTrace}");
             }
             return total >= _config.GetValue<decimal>("CupoDiario") ;
-        } 
+        }
+        private List<object> ProcesarMovimiento(MovimientoModel movimientoModel, Cuenta cuenta)
+        {
+            List<object> Result = new List<object>();
+            List<Movimiento> movimientosCuenta = null;
+            string mensaje = "ok";
+            MovimientoModel movimientoResult = movimientoModel;
+            DateTime MaxFecha;
+            try
+            {
+                if (cuenta == null)
+                {
+                    mensaje = $"No existe cuenta {movimientoModel.CuentaId} para el movimiento";
+                    ClsExcepcionCapturada.EscribirEvento(mensaje);
+                }
+                else
+                {
+                    movimientosCuenta = _repositoryMovimiento.GetAll().Where(x => x.CuentaId == movimientoModel.CuentaId).ToList();
+                    if (movimientosCuenta.Count== 0)
+                    {
+                        movimientoResult.Saldo = cuenta.SaldoInicial;
+                    }
+                    else
+                    { 
+                        MaxFecha = movimientosCuenta.Max(x => x.Fecha);
+                        movimientoResult.Saldo = movimientosCuenta.FirstOrDefault(x=>x.Fecha == MaxFecha).Saldo;
+                    }
+          
+                    movimientoResult.Saldo += movimientoModel.Valor;
+
+                    if (movimientoResult.Saldo < 0)
+                    {
+                        mensaje = $"Saldo Insuficiente para {movimientoModel.CuentaId}";
+                        ClsExcepcionCapturada.EscribirEvento(mensaje);
+                        Result.Add(mensaje);
+                        return Result;
+
+                    }
+
+                    if (SuperoLimiteDiario(movimientoModel))
+                    {
+                        mensaje = $"Cupo Excedido para {movimientoModel.CuentaId}";
+                        ClsExcepcionCapturada.EscribirEvento(mensaje);
+                        Result.Add(mensaje);
+                        return Result;
+                    }
+                    Result.Add(mensaje);
+                    Result.Add(movimientoResult);
+                }
+            }
+            catch (Exception ex)
+            {
+                ClsExcepcionCapturada.EscribirEvento(ex.Message);
+            }
+            return Result;
+        }
+           
     }
 }
